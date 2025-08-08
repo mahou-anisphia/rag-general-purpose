@@ -1,0 +1,29 @@
+import "~/styles/globals.css";
+
+import { type Metadata } from "next";
+import { Geist } from "next/font/google";
+
+import { TRPCReactProvider } from "~/trpc/react";
+
+export const metadata: Metadata = {
+  title: "RAG Assistant - Intelligent Document AI",
+  description: "Upload your documents and get instant, accurate answers. Our RAG-powered system understands your content and provides intelligent responses based on your data.",
+  icons: [{ rel: "icon", url: "/favicon.ico" }],
+};
+
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist-sans",
+});
+
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <html lang="en" className={`${geist.variable}`}>
+      <body>
+        <TRPCReactProvider>{children}</TRPCReactProvider>
+      </body>
+    </html>
+  );
+}
