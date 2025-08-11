@@ -16,7 +16,7 @@ export default function AdminDocumentsPage() {
   } | null>(null);
   const [previewLoading, setPreviewLoading] = useState<string | null>(null);
 
-  const { data: documents = [], refetch } = api.documents.list.useQuery();
+  const { data: documents = [], refetch } = api.documents.listAll.useQuery();
 
   const previewMutation = api.documents.getPreviewUrl.useMutation({
     onSuccess: (data) => {
@@ -43,7 +43,7 @@ export default function AdminDocumentsPage() {
       <div className="space-y-8">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Documents</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Upload and monitor source documents used by the RAG system.
           </p>
         </div>
@@ -53,7 +53,7 @@ export default function AdminDocumentsPage() {
           <SettingsSection />
         </section>
 
-        <DocumentsTable 
+        <DocumentsTable
           documents={documents}
           onPreview={handlePreview}
           onRefetch={refetch}
@@ -62,10 +62,7 @@ export default function AdminDocumentsPage() {
 
         <UpcomingFeatures />
 
-        <DocumentPreview 
-          previewDoc={previewDoc}
-          onClose={handleClosePreview}
-        />
+        <DocumentPreview previewDoc={previewDoc} onClose={handleClosePreview} />
       </div>
     </TooltipProvider>
   );

@@ -4,12 +4,7 @@ import { useState } from "react";
 import { api } from "~/trpc/react";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import {
   Table,
   TableBody,
@@ -31,7 +26,20 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "~/components/ui/dialog";
-import { FileText, ExternalLink, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
+import {
+  FileText,
+  ExternalLink,
+  Trash2,
+  MoreHorizontal,
+  FileSearch,
+} from "lucide-react";
 
 interface DocumentsTableProps {
   documents: Array<{
@@ -42,19 +50,21 @@ interface DocumentsTableProps {
     uploadedAt: string;
     size: string;
     source: string;
+    hasRawText: boolean;
   }>;
   onPreview: (documentId: string) => void;
   onRefetch: () => void;
   previewLoading: string | null;
 }
 
-export function DocumentsTable({ 
-  documents, 
-  onPreview, 
-  onRefetch, 
-  previewLoading 
+export function DocumentsTable({
+  documents,
+  onPreview,
+  onRefetch,
+  previewLoading,
 }: DocumentsTableProps) {
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  const [processLoading, setProcessLoading] = useState<string | null>(null);
 
   const deleteMutation = api.documents.delete.useMutation({
     onSuccess: () => {
@@ -67,18 +77,46 @@ export function DocumentsTable({
     },
   });
 
+  const processMutation = api.documents.processPdf.useMutation({
+    onSuccess: () => {
+      setProcessLoading(null);
+      onRefetch();
+    },
+    onError: (error) => {
+      setProcessLoading(null);
+      alert("Process failed: " + error.message);
+    },
+  });
+
   const handleDelete = (documentId: string, fileName: string) => {
-    if (confirm(`Are you sure you want to delete "${fileName}"? This action cannot be undone.`)) {
+    if (
+      confirm(
+        `Are you sure you want to delete "${fileName}"? This action cannot be undone.`,
+      )
+    ) {
       setDeleteLoading(documentId);
       deleteMutation.mutate({ documentId });
     }
   };
 
-  const getStatusBadge = (status: "pending" | "processing" | "indexed" | "error") => {
-    const variant = 
-      status === "indexed" ? "default" :
-      status === "processing" ? "secondary" :
-      status === "pending" ? "outline" : "destructive";
+  const handleProcess = (documentId: string, fileName: string) => {
+    if (confirm(`Process "${fileName}" to extract text content?`)) {
+      setProcessLoading(documentId);
+      processMutation.mutate({ documentId });
+    }
+  };
+
+  const getStatusBadge = (
+    status: "pending" | "processing" | "indexed" | "error",
+  ) => {
+    const variant =
+      status === "indexed"
+        ? "default"
+        : status === "processing"
+          ? "secondary"
+          : status === "pending"
+            ? "outline"
+            : "destructive";
     const displayStatus = status.charAt(0).toUpperCase() + status.slice(1);
     return <Badge variant={variant}>{displayStatus}</Badge>;
   };
@@ -99,7 +137,9 @@ export function DocumentsTable({
                 <TableHead className="min-w-[150px]">Uploaded At</TableHead>
                 <TableHead className="min-w-[80px]">Size</TableHead>
                 <TableHead className="min-w-[120px]">Source</TableHead>
-                <TableHead className="min-w-[140px] text-right">Actions</TableHead>
+                <TableHead className="min-w-[140px] text-right">
+                  Actions
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -107,10 +147,10 @@ export function DocumentsTable({
                 <TableRow key={doc.id}>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <FileText className="size-4 text-muted-foreground flex-shrink-0" />
+                      <FileText className="text-muted-foreground size-4 flex-shrink-0" />
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className="font-medium truncate max-w-[200px] block cursor-help">
+                          <span className="block max-w-[200px] cursor-help truncate font-medium">
                             {doc.name}
                           </span>
                         </TooltipTrigger>
@@ -122,12 +162,19 @@ export function DocumentsTable({
                   </TableCell>
                   <TableCell>{getStatusBadge(doc.status)}</TableCell>
                   <TableCell>
-                    <span className="truncate block max-w-[120px]" title={doc.uploader}>
+                    <span
+                      className="block max-w-[120px] truncate"
+                      title={doc.uploader}
+                    >
                       {doc.uploader}
                     </span>
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">{doc.uploadedAt}</TableCell>
-                  <TableCell className="whitespace-nowrap">{doc.size}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {doc.uploadedAt}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {doc.size}
+                  </TableCell>
                   <TableCell>{doc.source}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-2">
@@ -139,7 +186,9 @@ export function DocumentsTable({
                         </DialogTrigger>
                         <DialogContent>
                           <DialogHeader>
-                            <DialogTitle className="break-all pr-4">{doc.name}</DialogTitle>
+                            <DialogTitle className="pr-4 break-all">
+                              {doc.name}
+                            </DialogTitle>
                             <DialogDescription>
                               Document details and processing information.
                             </DialogDescription>
@@ -148,19 +197,29 @@ export function DocumentsTable({
                             <div className="grid grid-cols-2 gap-4">
                               <div>
                                 <p className="text-sm font-medium">Status</p>
-                                <p className="text-sm text-muted-foreground">{doc.status}</p>
+                                <p className="text-muted-foreground text-sm">
+                                  {doc.status}
+                                </p>
                               </div>
                               <div>
                                 <p className="text-sm font-medium">Size</p>
-                                <p className="text-sm text-muted-foreground">{doc.size}</p>
+                                <p className="text-muted-foreground text-sm">
+                                  {doc.size}
+                                </p>
                               </div>
                               <div>
-                                <p className="text-sm font-medium">Uploaded By</p>
-                                <p className="text-sm text-muted-foreground break-all">{doc.uploader}</p>
+                                <p className="text-sm font-medium">
+                                  Uploaded By
+                                </p>
+                                <p className="text-muted-foreground text-sm break-all">
+                                  {doc.uploader}
+                                </p>
                               </div>
                               <div>
                                 <p className="text-sm font-medium">Source</p>
-                                <p className="text-sm text-muted-foreground">{doc.source}</p>
+                                <p className="text-muted-foreground text-sm">
+                                  {doc.source}
+                                </p>
                               </div>
                             </div>
                           </div>
@@ -168,9 +227,9 @@ export function DocumentsTable({
                       </Dialog>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
+                          <Button
+                            size="sm"
+                            variant="ghost"
                             onClick={() => onPreview(doc.id)}
                             disabled={previewLoading === doc.id}
                           >
@@ -181,22 +240,44 @@ export function DocumentsTable({
                           <p>Preview document</p>
                         </TooltipContent>
                       </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={
+                              deleteLoading === doc.id ||
+                              processLoading === doc.id
+                            }
+                          >
+                            <MoreHorizontal className="size-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleProcess(doc.id, doc.name)}
+                            disabled={
+                              processLoading === doc.id ||
+                              doc.hasRawText ||
+                              !doc.name.toLowerCase().endsWith(".pdf")
+                            }
+                          >
+                            <FileSearch className="mr-2 size-4" />
+                            {doc.hasRawText
+                              ? "Already Processed"
+                              : "Process PDF"}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
                             onClick={() => handleDelete(doc.id, doc.name)}
                             disabled={deleteLoading === doc.id}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                            variant="destructive"
                           >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Delete document</p>
-                        </TooltipContent>
-                      </Tooltip>
+                            <Trash2 className="mr-2 size-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>

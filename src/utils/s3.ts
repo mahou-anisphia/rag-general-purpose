@@ -1,4 +1,10 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand, type PutObjectCommandInput } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+  type PutObjectCommandInput,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "~/env";
 
@@ -50,7 +56,9 @@ export interface S3Utils {
 /**
  * Create/upload a file to MinIO
  */
-export async function create(options: UploadOptions): Promise<{ key: string; etag: string }> {
+export async function create(
+  options: UploadOptions,
+): Promise<{ key: string; etag: string }> {
   const { file, key, contentType, metadata } = options;
 
   const params: PutObjectCommandInput = {
@@ -92,7 +100,10 @@ export async function deleteFile(key: string): Promise<void> {
  * @param key - The file key/path in the bucket
  * @param expiresInSeconds - URL expiration time in seconds (default: 3600 = 1 hour)
  */
-export async function getPublicUrl(key: string, expiresInSeconds: number = 3600): Promise<string> {
+export async function getPublicUrl(
+  key: string,
+  expiresInSeconds = 3600,
+): Promise<string> {
   const command = new PutObjectCommand({
     Bucket: env.MINIO_BUCKET,
     Key: key,
@@ -110,12 +121,13 @@ export async function getPublicUrl(key: string, expiresInSeconds: number = 3600)
 
 /**
  * Generate a presigned URL for downloading/reading files only
- * @param key - The file key/path in the bucket  
+ * @param key - The file key/path in the bucket
  * @param expiresInSeconds - URL expiration time in seconds (default: 3600 = 1 hour)
  */
-export async function getDownloadUrl(key: string, expiresInSeconds: number = 3600): Promise<string> {
-  const { GetObjectCommand } = await import("@aws-sdk/client-s3");
-  
+export async function getDownloadUrl(
+  key: string,
+  expiresInSeconds = 3600,
+): Promise<string> {
   const command = new GetObjectCommand({
     Bucket: env.MINIO_BUCKET,
     Key: key,
@@ -126,6 +138,33 @@ export async function getDownloadUrl(key: string, expiresInSeconds: number = 360
   });
 
   return url;
+}
+
+/**
+ * Get file content as Buffer from MinIO
+ * @param key - The file key/path in the bucket
+ */
+export async function getFileContent(key: string): Promise<Buffer> {
+  const command = new GetObjectCommand({
+    Bucket: env.MINIO_BUCKET,
+    Key: key,
+  });
+
+  const response = await s3Client.send(command);
+
+  if (!response.Body) {
+    throw new Error("File not found or empty");
+  }
+
+  // Convert readable stream to buffer
+  const chunks: Buffer[] = [];
+  const readable = response.Body as NodeJS.ReadableStream;
+
+  for await (const chunk of readable) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+
+  return Buffer.concat(chunks);
 }
 
 // Export default object with all functions

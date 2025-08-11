@@ -77,7 +77,7 @@ model Document {
     source      DocumentSource    @default(MANUAL_UPLOAD)
     createdAt   DateTime          @default(now())
     updatedAt   DateTime          @updatedAt
-    
+    rawText     String?           @db.Text // Extracted text content from PDF
     uploadedBy   User   @relation(fields: [uploadedById], references: [id])
     uploadedById String
 

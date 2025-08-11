@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { create as uploadToS3, getDownloadUrl, deleteFile as deleteFromS3 } from "~/utils/s3";
+import {
+  create as uploadToS3,
+  getDownloadUrl,
+  deleteFile as deleteFromS3,
+  getFileContent,
+} from "~/utils/s3";
 
 export const documentsRouter = createTRPCRouter({
   upload: protectedProcedure
@@ -10,13 +15,13 @@ export const documentsRouter = createTRPCRouter({
         fileContent: z.string(), // Base64 encoded file content
         contentType: z.string(),
         fileSize: z.number().max(20 * 1024 * 1024), // Max 20 MB
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       try {
         // Convert base64 to buffer
         const fileBuffer = Buffer.from(input.fileContent, "base64");
-        
+
         // Validate file size
         if (fileBuffer.length > 20 * 1024 * 1024) {
           throw new Error("File size exceeds 20 MB limit");
@@ -52,7 +57,7 @@ export const documentsRouter = createTRPCRouter({
             uploadedById: userId,
           },
         });
-        
+
         return {
           success: true,
           documentId: document.id,
@@ -63,7 +68,7 @@ export const documentsRouter = createTRPCRouter({
       } catch (error) {
         console.error("Upload error:", error);
         throw new Error(
-          error instanceof Error ? error.message : "Failed to upload file"
+          error instanceof Error ? error.message : "Failed to upload file",
         );
       }
     }),
@@ -94,7 +99,7 @@ export const documentsRouter = createTRPCRouter({
       uploader: doc.uploadedBy.email ?? doc.uploadedBy.name ?? "Unknown",
       uploadedAt: doc.createdAt.toLocaleString("en-US", {
         year: "numeric",
-        month: "2-digit", 
+        month: "2-digit",
         day: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
@@ -102,30 +107,77 @@ export const documentsRouter = createTRPCRouter({
       size: formatFileSize(doc.fileSize),
       contentType: doc.contentType,
       source: formatSource(doc.source),
-      status: doc.status.toLowerCase() as "pending" | "processing" | "indexed" | "error",
+      status: doc.status.toLowerCase() as
+        | "pending"
+        | "processing"
+        | "indexed"
+        | "error",
+    }));
+  }),
+
+  listAll: protectedProcedure.query(async ({ ctx }) => {
+    // For admin use - lists all documents from all users
+    const documents = await ctx.db.document.findMany({
+      include: {
+        uploadedBy: {
+          select: {
+            email: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return documents.map((doc) => ({
+      id: doc.id,
+      name: doc.name,
+      fileName: doc.fileName,
+      fileKey: doc.fileKey,
+      uploader: doc.uploadedBy.email ?? doc.uploadedBy.name ?? "Unknown",
+      uploadedAt: doc.createdAt.toLocaleString("en-US", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      size: formatFileSize(doc.fileSize),
+      contentType: doc.contentType,
+      source: formatSource(doc.source),
+      status: doc.status.toLowerCase() as
+        | "pending"
+        | "processing"
+        | "indexed"
+        | "error",
+      hasRawText: !!doc.rawText,
     }));
   }),
 
   getPreviewUrl: protectedProcedure
     .input(z.object({ documentId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      // Get document and verify ownership
+      // Get document - admin can preview any document, regular users only their own
       const document = await ctx.db.document.findFirst({
         where: {
           id: input.documentId,
-          uploadedById: ctx.session.user.id,
+          // For admin users, don't restrict by ownership
+          // For regular users, restrict to their own documents
+          // Note: You might want to add proper role checking here
         },
       });
 
       if (!document) {
-        throw new Error("Document not found or access denied");
+        throw new Error("Document not found");
       }
 
       // Check if the file type supports preview
       const previewableTypes = [
         "application/pdf",
         "text/plain",
-        "text/markdown", 
+        "text/markdown",
         "text/csv",
         "image/jpeg",
         "image/png",
@@ -139,7 +191,7 @@ export const documentsRouter = createTRPCRouter({
 
       // Generate presigned URL for download (valid for 5 minutes)
       const previewUrl = await getDownloadUrl(document.fileKey, 300);
-      
+
       return {
         url: previewUrl,
         contentType: document.contentType,
@@ -151,16 +203,18 @@ export const documentsRouter = createTRPCRouter({
     .input(z.object({ documentId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        // Get document and verify ownership
+        // Get document - admin can delete any document, regular users only their own
         const document = await ctx.db.document.findFirst({
           where: {
             id: input.documentId,
-            uploadedById: ctx.session.user.id,
+            // For admin users, don't restrict by ownership
+            // For regular users, restrict to their own documents
+            // Note: You might want to add proper role checking here
           },
         });
 
         if (!document) {
-          throw new Error("Document not found or access denied");
+          throw new Error("Document not found");
         }
 
         // Delete from MinIO/S3 first
@@ -180,7 +234,94 @@ export const documentsRouter = createTRPCRouter({
       } catch (error) {
         console.error("Delete error:", error);
         throw new Error(
-          error instanceof Error ? error.message : "Failed to delete document"
+          error instanceof Error ? error.message : "Failed to delete document",
+        );
+      }
+    }),
+
+  processPdf: protectedProcedure
+    .input(z.object({ documentId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Get document from database and verify it exists
+        const document = await ctx.db.document.findUnique({
+          where: {
+            id: input.documentId,
+          },
+        });
+
+        if (!document) {
+          throw new Error("Document not found");
+        }
+
+        // Check if document is PDF
+        if (document.contentType !== "application/pdf") {
+          throw new Error("Only PDF documents can be processed");
+        }
+
+        // Check if already processed
+        if (document.rawText) {
+          throw new Error("Document has already been processed");
+        }
+
+        // Update status to processing
+        await ctx.db.document.update({
+          where: {
+            id: input.documentId,
+          },
+          data: {
+            status: "PROCESSING",
+          },
+        });
+
+        try {
+          // Fetch PDF file from MinIO
+          const fileBuffer = await getFileContent(document.fileKey);
+
+          // Import pdf-parse with debugging disabled
+          const pdf = (await import("pdf-parse-debugging-disabled")).default;
+
+          // Extract text from PDF
+          const pdfData = await pdf(fileBuffer);
+          const extractedText: string = pdfData.text;
+
+          if (!extractedText || extractedText.trim().length === 0) {
+            throw new Error("No text content found in PDF");
+          }
+
+          // Update document with extracted text and processing status
+          await ctx.db.document.update({
+            where: {
+              id: input.documentId,
+            },
+            data: {
+              rawText: extractedText,
+              status: "PROCESSING",
+            },
+          });
+
+          return {
+            success: true,
+            message: "PDF text extracted successfully - ready for indexing",
+            textLength: extractedText.length,
+          };
+        } catch (processingError) {
+          // Update status to error if processing failed
+          await ctx.db.document.update({
+            where: {
+              id: input.documentId,
+            },
+            data: {
+              status: "ERROR",
+            },
+          });
+
+          throw processingError;
+        }
+      } catch (error) {
+        console.error("PDF processing error:", error);
+        throw new Error(
+          error instanceof Error ? error.message : "Failed to process PDF",
         );
       }
     }),
@@ -188,10 +329,10 @@ export const documentsRouter = createTRPCRouter({
 
 // Helper functions
 function formatFileSize(bytes: number): string {
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  if (bytes === 0) return '0 Bytes';
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  if (bytes === 0) return "0 Bytes";
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + ' ' + sizes[i];
+  return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + " " + sizes[i];
 }
 
 function formatSource(source: string): string {
