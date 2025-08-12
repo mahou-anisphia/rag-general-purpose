@@ -18,6 +18,11 @@ export const env = createEnv({
     MINIO_ACCESS_KEY: z.string(),
     MINIO_SECRET_KEY: z.string(),
     MINIO_BUCKET: z.string(),
+    QDRANT_URL: z.string(),
+    QDRANT_COLLECTION: z.string(),
+    OPENAI_API_KEY: z.string(),
+    OPENAI_EMBEDDING_MODEL: z.string(),
+    // Currently using text-embedding-3-large as embedding model
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -46,7 +51,68 @@ export const env = createEnv({
     MINIO_ACCESS_KEY: process.env.MINIO_ACCESS_KEY,
     MINIO_SECRET_KEY: process.env.MINIO_SECRET_KEY,
     MINIO_BUCKET: process.env.MINIO_BUCKET,
+    QDRANT_URL: process.env.QDRANT_URL,
+    QDRANT_COLLECTION: process.env.QDRANT_COLLECTION,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    OPENAI_EMBEDDING_MODEL: process.env.OPENAI_EMBEDDING_MODEL,
   },
+  /**
+   * Qdrant Config
+   * {
+  "params": {
+    "vectors": {
+      "text-embedding-3-large": {
+        "size": 3072,
+        "distance": "Cosine",
+        "hnsw_config": {
+          "m": 24,
+          "ef_construct": 256,
+          "payload_m": 24
+        },
+        "on_disk": false,
+        "datatype": "float32"
+      }
+    },
+    "shard_number": 1,
+    "replication_factor": 1,
+    "write_consistency_factor": 1,
+    "on_disk_payload": true,
+    "sparse_vectors": {
+      "text-sparse-vector": {
+        "index": {
+          "on_disk": true,
+          "datatype": "float32"
+        }
+      }
+    }
+  },
+  "hnsw_config": {
+    "m": 16,
+    "ef_construct": 100,
+    "full_scan_threshold": 10000,
+    "max_indexing_threads": 0,
+    "on_disk": false
+  },
+  "optimizer_config": {
+    "deleted_threshold": 0.2,
+    "vacuum_min_vector_number": 1000,
+    "default_segment_number": 0,
+    "max_segment_size": null,
+    "memmap_threshold": null,
+    "indexing_threshold": 10000,
+    "flush_interval_sec": 5,
+    "max_optimization_threads": null
+  },
+  "wal_config": {
+    "wal_capacity_mb": 32,
+    "wal_segments_ahead": 0
+  },
+  "quantization_config": null,
+  "strict_mode_config": {
+    "enabled": false
+  }
+}
+   */
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
    * useful for Docker builds.

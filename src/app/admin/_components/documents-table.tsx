@@ -39,6 +39,7 @@ import {
   Trash2,
   MoreHorizontal,
   FileSearch,
+  Zap,
 } from "lucide-react";
 
 interface DocumentsTableProps {
@@ -65,6 +66,7 @@ export function DocumentsTable({
 }: DocumentsTableProps) {
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [processLoading, setProcessLoading] = useState<string | null>(null);
+  const [indexLoading, setIndexLoading] = useState<string | null>(null);
 
   const deleteMutation = api.documents.delete.useMutation({
     onSuccess: () => {
@@ -88,6 +90,26 @@ export function DocumentsTable({
     },
   });
 
+  const indexMutation = api.documents.processForIndexing.useMutation({
+    onSuccess: (data) => {
+      setIndexLoading(null);
+      onRefetch();
+      if (data.stats) {
+        alert(
+          `Document indexed successfully!\n\n` +
+            `Chunks: ${data.stats.chunks}\n` +
+            `Points indexed: ${data.stats.pointsIndexed}\n` +
+            `Tokens used: ${data.stats.tokensUsed}\n` +
+            `Estimated cost: $${data.stats.estimatedCost.toFixed(4)}`,
+        );
+      }
+    },
+    onError: (error) => {
+      setIndexLoading(null);
+      alert("Indexing failed: " + error.message);
+    },
+  });
+
   const handleDelete = (documentId: string, fileName: string) => {
     if (
       confirm(
@@ -103,6 +125,17 @@ export function DocumentsTable({
     if (confirm(`Process "${fileName}" to extract text content?`)) {
       setProcessLoading(documentId);
       processMutation.mutate({ documentId });
+    }
+  };
+
+  const handleIndex = (documentId: string, fileName: string) => {
+    if (
+      confirm(
+        `Index "${fileName}" for vector search? This will generate embeddings and may incur OpenAI costs.`,
+      )
+    ) {
+      setIndexLoading(documentId);
+      indexMutation.mutate({ documentId });
     }
   };
 
@@ -247,7 +280,8 @@ export function DocumentsTable({
                             variant="ghost"
                             disabled={
                               deleteLoading === doc.id ||
-                              processLoading === doc.id
+                              processLoading === doc.id ||
+                              indexLoading === doc.id
                             }
                           >
                             <MoreHorizontal className="size-4" />
@@ -266,6 +300,21 @@ export function DocumentsTable({
                             {doc.hasRawText
                               ? "Already Processed"
                               : "Process PDF"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleIndex(doc.id, doc.name)}
+                            disabled={
+                              indexLoading === doc.id ||
+                              !doc.hasRawText ||
+                              doc.status === "indexed"
+                            }
+                          >
+                            <Zap className="mr-2 size-4" />
+                            {doc.status === "indexed"
+                              ? "Already Indexed"
+                              : indexLoading === doc.id
+                                ? "Indexing..."
+                                : "Index for Search"}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem

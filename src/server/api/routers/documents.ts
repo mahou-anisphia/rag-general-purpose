@@ -6,6 +6,20 @@ import {
   deleteFile as deleteFromS3,
   getFileContent,
 } from "~/utils/s3";
+import { chunkText, getChunkingStats } from "~/utils/chunking";
+import {
+  generateBatchEmbeddings,
+  calculateEmbeddingCost,
+} from "~/utils/embeddings";
+import {
+  indexDocumentChunks,
+  deleteDocumentVectors,
+} from "~/utils/vector-store";
+import {
+  debugQdrantConnection,
+  createCollectionManually,
+  testVectorInsert,
+} from "~/utils/qdrant-debug";
 
 export const documentsRouter = createTRPCRouter({
   upload: protectedProcedure
@@ -220,6 +234,16 @@ export const documentsRouter = createTRPCRouter({
         // Delete from MinIO/S3 first
         await deleteFromS3(document.fileKey);
 
+        // Delete vectors from Qdrant if document was indexed
+        if (document.status === "INDEXED") {
+          try {
+            await deleteDocumentVectors(input.documentId);
+          } catch (vectorError) {
+            console.warn("Failed to delete vectors for document:", vectorError);
+            // Continue with deletion even if vector cleanup fails
+          }
+        }
+
         // Delete from database
         await ctx.db.document.delete({
           where: {
@@ -325,6 +349,149 @@ export const documentsRouter = createTRPCRouter({
         );
       }
     }),
+
+  processForIndexing: protectedProcedure
+    .input(z.object({ documentId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Get document from database and verify it exists
+        const document = await ctx.db.document.findUnique({
+          where: {
+            id: input.documentId,
+          },
+        });
+
+        if (!document) {
+          throw new Error("Document not found");
+        }
+
+        // Check if document has raw text
+        if (!document.rawText || document.rawText.trim().length === 0) {
+          throw new Error(
+            "Document has no extracted text. Please process the PDF first.",
+          );
+        }
+
+        // Check if already indexed
+        if (document.status === "INDEXED") {
+          throw new Error("Document is already indexed");
+        }
+
+        // Update status to processing
+        await ctx.db.document.update({
+          where: {
+            id: input.documentId,
+          },
+          data: {
+            status: "PROCESSING",
+          },
+        });
+
+        try {
+          // Step 1: Chunk the text
+          const chunks = await chunkText(document.rawText);
+          const chunkStats = getChunkingStats(chunks);
+
+          if (chunks.length === 0) {
+            throw new Error("No text chunks were generated");
+          }
+
+          // Step 2: Generate embeddings for all chunks
+          const chunkTexts = chunks.map((chunk) => chunk.content);
+          const embeddingResult = await generateBatchEmbeddings(chunkTexts);
+
+          // Step 3: Index vectors in Qdrant
+          const indexingResult = await indexDocumentChunks(
+            input.documentId,
+            chunks,
+            embeddingResult,
+          );
+
+          // Step 4: Update document status to indexed
+          await ctx.db.document.update({
+            where: {
+              id: input.documentId,
+            },
+            data: {
+              status: "INDEXED",
+            },
+          });
+
+          // Calculate costs
+          const embeddingCost = calculateEmbeddingCost(
+            embeddingResult.totalTokens,
+          );
+
+          return {
+            success: true,
+            message: "Document successfully processed and indexed",
+            stats: {
+              chunks: chunkStats.totalChunks,
+              totalCharacters: chunkStats.totalCharacters,
+              averageChunkSize: chunkStats.averageChunkSize,
+              pointsIndexed: indexingResult.pointsIndexed,
+              tokensUsed: embeddingResult.totalTokens,
+              estimatedCost: embeddingCost,
+              model: embeddingResult.model,
+            },
+          };
+        } catch (processingError) {
+          // Update status to error if processing failed
+          await ctx.db.document.update({
+            where: {
+              id: input.documentId,
+            },
+            data: {
+              status: "ERROR",
+            },
+          });
+
+          throw processingError;
+        }
+      } catch (error) {
+        console.error("Document indexing error:", error);
+        throw new Error(
+          error instanceof Error
+            ? error.message
+            : "Failed to process document for indexing",
+        );
+      }
+    }),
+
+  debugQdrant: protectedProcedure.mutation(async () => {
+    try {
+      const debug = await debugQdrantConnection();
+
+      if (!debug.success) {
+        throw new Error("Qdrant connection failed");
+      }
+
+      if (!debug.collectionExists) {
+        console.log("Collection doesn't exist, creating...");
+        const createResult = await createCollectionManually();
+        if (!createResult.success) {
+          throw new Error("Failed to create collection");
+        }
+      }
+
+      // Test vector insert
+      const testResult = await testVectorInsert();
+      if (!testResult.success) {
+        throw new Error("Vector insert test failed");
+      }
+
+      return {
+        success: true,
+        message: "Qdrant debug completed successfully",
+        collectionExists: debug.collectionExists,
+      };
+    } catch (error) {
+      console.error("Qdrant debug error:", error);
+      throw new Error(
+        error instanceof Error ? error.message : "Qdrant debug failed",
+      );
+    }
+  }),
 });
 
 // Helper functions
