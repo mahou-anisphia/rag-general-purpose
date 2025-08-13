@@ -3,11 +3,12 @@ import "~/styles/globals.css";
 import { type Metadata } from "next";
 import { Geist } from "next/font/google";
 
-import { TRPCReactProvider } from "~/trpc/react";
+import { Providers } from "~/components/providers";
 
 export const metadata: Metadata = {
   title: "RAG Assistant - Intelligent Document AI",
-  description: "Upload your documents and get instant, accurate answers. Our RAG-powered system understands your content and provides intelligent responses based on your data.",
+  description:
+    "Upload your documents and get instant, accurate answers. Our RAG-powered system understands your content and provides intelligent responses based on your data.",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
@@ -22,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable}`}>
       <body>
-        <TRPCReactProvider>{children}</TRPCReactProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
