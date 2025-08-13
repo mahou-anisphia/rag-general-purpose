@@ -59,9 +59,9 @@ export function LogoutDialog({
               <AlertTriangle className="text-destructive h-5 w-5" />
             </div>
             <div className="space-y-1">
-              <DialogTitle>Signing out?</DialogTitle>
+              <DialogTitle>Sign out of your account?</DialogTitle>
               <DialogDescription>
-                You can always sign in again.
+                You will be logged out and redirected to the home page.
               </DialogDescription>
             </div>
           </div>
