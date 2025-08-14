@@ -322,12 +322,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Icons from [Lucide React](https://lucide.dev/)
 - AI powered by [OpenAI](https://openai.com/) and [Anthropic](https://anthropic.com/)
 
-## 📞 Support
-
-- 📧 **Email**: [your-email@domain.com]
-- 💬 **Discord**: [Your Discord Server]
-- 🐛 **Issues**: [GitHub Issues](https://github.com/your-username/kurubot/issues)
-
 ---
 
 <div align="center">
