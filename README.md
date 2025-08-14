@@ -4,7 +4,7 @@
 
 ![KuruBot](https://img.shields.io/badge/KuruBot-🌙%20AI%20Assistant-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)
-![Next.js](https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
+![Next.js](https://img.shields.io/badge/next.js-000000?logo=nextdotjs&logoColor=white)
 ![tRPC](https://img.shields.io/badge/tRPC-2596BE?logo=trpc&logoColor=white)
 ![Prisma](https://img.shields.io/badge/Prisma-2D3748?logo=prisma&logoColor=white)
 
