@@ -22,6 +22,8 @@ export const env = createEnv({
     QDRANT_COLLECTION: z.string(),
     OPENAI_API_KEY: z.string(),
     OPENAI_EMBEDDING_MODEL: z.string(),
+    ANTHROPIC_API_KEY: z.string(),
+    ANTHROPIC_CLAUDE_MODEL: z.string(),
     // Currently using text-embedding-3-large as embedding model
     NODE_ENV: z
       .enum(["development", "test", "production"])
@@ -55,6 +57,8 @@ export const env = createEnv({
     QDRANT_COLLECTION: process.env.QDRANT_COLLECTION,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OPENAI_EMBEDDING_MODEL: process.env.OPENAI_EMBEDDING_MODEL,
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+    ANTHROPIC_CLAUDE_MODEL: process.env.ANTHROPIC_CLAUDE_MODEL,
   },
   /**
    * Qdrant Config

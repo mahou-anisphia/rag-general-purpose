@@ -44,7 +44,7 @@ export default function AdminDocumentsPage() {
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Documents</h1>
           <p className="text-muted-foreground text-sm">
-            Upload and monitor source documents used by the RAG system.
+            Upload and monitor source documents used by KuruBot.
           </p>
         </div>
 

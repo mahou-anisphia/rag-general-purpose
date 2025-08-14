@@ -6,9 +6,9 @@ import { Geist } from "next/font/google";
 import { Providers } from "~/components/providers";
 
 export const metadata: Metadata = {
-  title: "RAG Assistant - Intelligent Document AI",
+  title: "KuruBot - Intelligent Document AI",
   description:
-    "Upload your documents and get instant, accurate answers. Our RAG-powered system understands your content and provides intelligent responses based on your data.",
+    "Upload your documents and get instant, accurate answers. KuruBot's RAG-powered system understands your content and provides intelligent responses based on your data.",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 

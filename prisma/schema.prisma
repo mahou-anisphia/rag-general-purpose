@@ -64,6 +64,7 @@ model User {
     sessions      Session[]
     posts         Post[]
     documents     Document[]
+    chats         Chat[]
 }
 
 model Document {
@@ -105,4 +106,49 @@ model VerificationToken {
     expires    DateTime
 
     @@unique([identifier, token])
+}
+
+model Chat {
+    id        String   @id @default(cuid())
+    title     String?  // Optional title for the chat (can be auto-generated from first message)
+    userId    String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    messages  Message[]
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([userId])
+    @@index([createdAt])
+}
+
+model Message {
+    id        String      @id @default(cuid())
+    content   String      @db.Text
+    role      MessageRole
+    chatId    String
+    chat      Chat        @relation(fields: [chatId], references: [id], onDelete: Cascade)
+    sources   MessageSource[] // Related document sources for context
+    createdAt DateTime    @default(now())
+
+    @@index([chatId])
+    @@index([createdAt])
+}
+
+model MessageSource {
+    id        String  @id @default(cuid())
+    messageId String
+    message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+    title     String  // Document title or chunk reference
+    snippet   String  @db.Text // Relevant text snippet
+    page      Int?    // Page number if applicable
+    score     Float?  // Similarity score from vector search
+    documentId String? // Reference to source document
+
+    @@index([messageId])
+}
+
+enum MessageRole {
+    USER
+    ASSISTANT
+    SYSTEM
 }

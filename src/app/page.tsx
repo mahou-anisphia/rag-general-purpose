@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Button } from "~/components/ui/button";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -11,14 +10,12 @@ import { Badge } from "~/components/ui/badge";
 import { LogoutDialog } from "~/components/logout-dialog";
 import { auth } from "~/server/auth";
 import {
-  Bot,
+  Moon,
   FileText,
   Search,
   Zap,
   Shield,
   Users,
-  ArrowRight,
-  Database,
   MessageSquare,
   Upload,
   LogIn,
@@ -34,8 +31,8 @@ export default async function HomePage() {
       <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 border-b backdrop-blur">
         <div className="container mx-auto flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <Bot className="text-primary h-6 w-6" />
-            <span className="text-lg font-semibold">RAG Assistant</span>
+            <Moon className="text-primary h-6 w-6" />
+            <span className="text-lg font-semibold">KuruBot</span>
           </div>
           <nav className="flex items-center gap-4">
             {session?.user ? (
@@ -143,13 +140,13 @@ export default async function HomePage() {
                   Powered by AI
                 </Badge>
                 <h1 className="text-4xl font-bold tracking-tight md:text-6xl">
-                  Intelligent Document
-                  <span className="text-primary block">Assistant</span>
+                  Meet
+                  <span className="text-primary block">KuruBot</span>
                 </h1>
                 <p className="text-muted-foreground mx-auto max-w-2xl text-xl leading-relaxed">
-                  Upload your documents and get instant, accurate answers. Our
-                  RAG-powered system understands your content and provides
-                  intelligent responses based on your data.
+                  Upload your documents and get instant, accurate answers.
+                  KuruBot&apos;s RAG-powered system understands your content and
+                  provides intelligent responses based on your data.
                 </p>
 
                 <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -160,7 +157,7 @@ export default async function HomePage() {
                     </Button>
                   </Link>
                   <p className="text-muted-foreground text-sm">
-                    Sign in to start using RAG Assistant
+                    Sign in to start using KuruBot
                   </p>
                 </div>
               </div>
@@ -308,8 +305,8 @@ export default async function HomePage() {
                   Keep Exploring!
                 </h2>
                 <p className="text-muted-foreground text-xl">
-                  Your RAG Assistant is ready. Upload more documents or continue
-                  your conversations.
+                  Your KuruBot is ready. Upload more documents or continue your
+                  conversations.
                 </p>
                 <div className="flex flex-col justify-center gap-4 sm:flex-row">
                   <Link href="/admin">
@@ -359,8 +356,8 @@ export default async function HomePage() {
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
             <div className="flex items-center gap-2">
-              <Bot className="text-primary h-5 w-5" />
-              <span className="font-semibold">RAG Assistant</span>
+              <Moon className="text-primary h-5 w-5" />
+              <span className="font-semibold">KuruBot</span>
             </div>
             <div className="text-muted-foreground flex items-center gap-6 text-sm">
               <Link

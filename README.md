@@ -1,6 +1,6 @@
-# Create T3 App
+# KuruBot
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+KuruBot is an intelligent RAG (Retrieval-Augmented Generation) chatbot built with the [T3 Stack](https://create.t3.gg/) that can answer questions about your uploaded documents.
 
 ## What's next? How do I make an app with this?
 

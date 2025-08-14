@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { auth, signIn } from "~/server/auth";
-import { Bot, ArrowLeft } from "lucide-react";
+import { Moon, ArrowLeft } from "lucide-react";
 import { SiDiscord } from "@react-icons/all-files/si/SiDiscord";
 import { SiGoogle } from "@react-icons/all-files/si/SiGoogle";
 import { SiGithub } from "@react-icons/all-files/si/SiGithub";
@@ -41,8 +41,8 @@ export default async function LoginPage() {
         <div className="space-y-2 text-center">
           <div className="flex justify-center">
             <div className="flex items-center gap-2">
-              <Bot className="text-primary h-8 w-8" />
-              <span className="text-2xl font-bold">RAG Assistant</span>
+              <Moon className="text-primary h-8 w-8" />
+              <span className="text-2xl font-bold">KuruBot</span>
             </div>
           </div>
           <p className="text-muted-foreground">
