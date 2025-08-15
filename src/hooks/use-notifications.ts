@@ -75,6 +75,7 @@ export function useNotifications() {
     }: {
       loading: string;
       success: string | ((data: T) => string);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       error: string | ((err: any) => string);
     },
   ) => {

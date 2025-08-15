@@ -16,7 +16,14 @@ import {
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
-import { useConfirmation } from "~/hooks/use-confirmation";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog";
 
 interface ChatSidebarProps {
   currentChatId?: string;
@@ -32,7 +39,8 @@ export function ChatSidebar({
   onToggleCollapse,
 }: ChatSidebarProps) {
   const [hoveredChat, setHoveredChat] = useState<string | null>(null);
-  const { confirm, ConfirmationDialog } = useConfirmation();
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
 
   // Get chat list from tRPC
   const { data: chats = [], isLoading } = api.chat.list.useQuery();
@@ -55,22 +63,19 @@ export function ChatSidebar({
     return date.toLocaleDateString();
   };
 
-  const handleDeleteChat = async (chatId: string, e: React.MouseEvent) => {
+  const handleDeleteChatClick = (chatId: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setSelectedChatId(chatId);
+    setDeleteConfirmOpen(true);
+  };
 
-    const confirmed = await confirm({
-      title: "Delete Chat",
-      description:
-        "Are you sure you want to delete this chat? This action cannot be undone.",
-      confirmText: "Delete",
-      cancelText: "Cancel",
-      variant: "destructive",
-    });
-
-    if (confirmed) {
+  const confirmDeleteChat = async () => {
+    if (selectedChatId) {
       try {
-        await deleteChatMutation.mutateAsync({ chatId });
+        await deleteChatMutation.mutateAsync({ chatId: selectedChatId });
+        setDeleteConfirmOpen(false);
+        setSelectedChatId(null);
       } catch (error) {
         console.error("Error deleting chat:", error);
       }
@@ -190,7 +195,7 @@ export function ChatSidebar({
                         variant="ghost"
                         size="sm"
                         className="h-6 w-6 p-0 opacity-70 hover:opacity-100"
-                        onClick={(e) => handleDeleteChat(chat.id, e)}
+                        onClick={(e) => handleDeleteChatClick(chat.id, e)}
                         disabled={deleteChatMutation.isPending}
                       >
                         <Trash2 className="h-3 w-3" />
@@ -249,7 +254,37 @@ export function ChatSidebar({
           {!isCollapsed && "Sign out"}
         </Button>
       </div>
-      <ConfirmationDialog />
+
+      {/* Delete Chat Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Chat</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this chat? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteConfirmOpen(false);
+                setSelectedChatId(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteChat}
+              disabled={deleteChatMutation.isPending}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
