@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
+import { useConfirmation } from "~/hooks/use-confirmation";
 
 interface ChatSidebarProps {
   currentChatId?: string;
@@ -31,6 +32,7 @@ export function ChatSidebar({
   onToggleCollapse,
 }: ChatSidebarProps) {
   const [hoveredChat, setHoveredChat] = useState<string | null>(null);
+  const { confirm, ConfirmationDialog } = useConfirmation();
 
   // Get chat list from tRPC
   const { data: chats = [], isLoading } = api.chat.list.useQuery();
@@ -57,7 +59,16 @@ export function ChatSidebar({
     e.preventDefault();
     e.stopPropagation();
 
-    if (confirm("Are you sure you want to delete this chat?")) {
+    const confirmed = await confirm({
+      title: "Delete Chat",
+      description:
+        "Are you sure you want to delete this chat? This action cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "destructive",
+    });
+
+    if (confirmed) {
       try {
         await deleteChatMutation.mutateAsync({ chatId });
       } catch (error) {
@@ -238,6 +249,7 @@ export function ChatSidebar({
           {!isCollapsed && "Sign out"}
         </Button>
       </div>
+      <ConfirmationDialog />
     </div>
   );
 }

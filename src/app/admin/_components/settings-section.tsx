@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api } from "~/trpc/react";
+import { useNotifications } from "~/hooks/use-notifications";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -13,16 +14,20 @@ import { Settings } from "lucide-react";
 export function SettingsSection() {
   const [debugLoading, setDebugLoading] = useState(false);
 
+  const { showError, showSuccess } = useNotifications();
+
   const debugMutation = api.documents.debugQdrant.useMutation({
     onSuccess: (data) => {
       setDebugLoading(false);
-      alert(
-        `Debug completed successfully!\n\nCollection existed: ${data.collectionExists}\nMessage: ${data.message}`,
-      );
+      showSuccess({
+        title: "Debug completed successfully!",
+        description: `Collection existed: ${data.collectionExists} • ${data.message}`,
+        duration: 6000,
+      });
     },
     onError: (error) => {
       setDebugLoading(false);
-      alert("Debug failed: " + error.message);
+      showError({ title: "Debug failed", error });
     },
   });
 

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { api } from "~/trpc/react";
+import { useNotifications } from "~/hooks/use-notifications";
+import { truncateFilename } from "~/utils/filename";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -22,6 +24,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -68,6 +71,17 @@ export function DocumentsTable({
   const [processLoading, setProcessLoading] = useState<string | null>(null);
   const [indexLoading, setIndexLoading] = useState<string | null>(null);
 
+  // Confirmation dialog states
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [processConfirmOpen, setProcessConfirmOpen] = useState(false);
+  const [indexConfirmOpen, setIndexConfirmOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+
+  const { showError, showSuccess } = useNotifications();
+
   const deleteMutation = api.documents.delete.useMutation({
     onSuccess: () => {
       setDeleteLoading(null);
@@ -75,7 +89,7 @@ export function DocumentsTable({
     },
     onError: (error) => {
       setDeleteLoading(null);
-      alert("Delete failed: " + error.message);
+      showError({ title: "Delete failed", error: error.message });
     },
   });
 
@@ -86,7 +100,7 @@ export function DocumentsTable({
     },
     onError: (error) => {
       setProcessLoading(null);
-      alert("Process failed: " + error.message);
+      showError({ title: "Process failed", error: error.message });
     },
   });
 
@@ -95,47 +109,58 @@ export function DocumentsTable({
       setIndexLoading(null);
       onRefetch();
       if (data.stats) {
-        alert(
-          `Document indexed successfully!\n\n` +
-            `Chunks: ${data.stats.chunks}\n` +
-            `Points indexed: ${data.stats.pointsIndexed}\n` +
-            `Tokens used: ${data.stats.tokensUsed}\n` +
-            `Estimated cost: $${data.stats.estimatedCost.toFixed(4)}`,
-        );
+        showSuccess({
+          title: "Document indexed successfully!",
+          description: `Chunks: ${data.stats.chunks} • Points indexed: ${data.stats.pointsIndexed} • Tokens used: ${data.stats.tokensUsed} • Cost: $${data.stats.estimatedCost.toFixed(4)}`,
+          duration: 8000,
+        });
       }
     },
     onError: (error) => {
       setIndexLoading(null);
-      alert("Indexing failed: " + error.message);
+      showError({ title: "Indexing failed", error: error.message });
     },
   });
 
-  const handleDelete = (documentId: string, fileName: string) => {
-    if (
-      confirm(
-        `Are you sure you want to delete "${fileName}"? This action cannot be undone.`,
-      )
-    ) {
-      setDeleteLoading(documentId);
-      deleteMutation.mutate({ documentId });
+  const handleDeleteClick = (documentId: string, fileName: string) => {
+    setSelectedDocument({ id: documentId, name: fileName });
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleProcessClick = (documentId: string, fileName: string) => {
+    setSelectedDocument({ id: documentId, name: fileName });
+    setProcessConfirmOpen(true);
+  };
+
+  const handleIndexClick = (documentId: string, fileName: string) => {
+    setSelectedDocument({ id: documentId, name: fileName });
+    setIndexConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (selectedDocument) {
+      setDeleteLoading(selectedDocument.id);
+      deleteMutation.mutate({ documentId: selectedDocument.id });
+      setDeleteConfirmOpen(false);
+      setSelectedDocument(null);
     }
   };
 
-  const handleProcess = (documentId: string, fileName: string) => {
-    if (confirm(`Process "${fileName}" to extract text content?`)) {
-      setProcessLoading(documentId);
-      processMutation.mutate({ documentId });
+  const confirmProcess = () => {
+    if (selectedDocument) {
+      setProcessLoading(selectedDocument.id);
+      processMutation.mutate({ documentId: selectedDocument.id });
+      setProcessConfirmOpen(false);
+      setSelectedDocument(null);
     }
   };
 
-  const handleIndex = (documentId: string, fileName: string) => {
-    if (
-      confirm(
-        `Index "${fileName}" for vector search? This will generate embeddings and may incur OpenAI costs.`,
-      )
-    ) {
-      setIndexLoading(documentId);
-      indexMutation.mutate({ documentId });
+  const confirmIndex = () => {
+    if (selectedDocument) {
+      setIndexLoading(selectedDocument.id);
+      indexMutation.mutate({ documentId: selectedDocument.id });
+      setIndexConfirmOpen(false);
+      setSelectedDocument(null);
     }
   };
 
@@ -184,7 +209,7 @@ export function DocumentsTable({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span className="block max-w-[200px] cursor-help truncate font-medium">
-                            {doc.name}
+                            {truncateFilename(doc.name, 35)}
                           </span>
                         </TooltipTrigger>
                         <TooltipContent className="max-w-sm">
@@ -219,7 +244,7 @@ export function DocumentsTable({
                         </DialogTrigger>
                         <DialogContent>
                           <DialogHeader>
-                            <DialogTitle className="pr-4 break-all">
+                            <DialogTitle className="pr-4 text-left break-all">
                               {doc.name}
                             </DialogTitle>
                             <DialogDescription>
@@ -289,7 +314,7 @@ export function DocumentsTable({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={() => handleProcess(doc.id, doc.name)}
+                            onClick={() => handleProcessClick(doc.id, doc.name)}
                             disabled={
                               processLoading === doc.id ||
                               doc.hasRawText ||
@@ -302,7 +327,7 @@ export function DocumentsTable({
                               : "Process PDF"}
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleIndex(doc.id, doc.name)}
+                            onClick={() => handleIndexClick(doc.id, doc.name)}
                             disabled={
                               indexLoading === doc.id ||
                               !doc.hasRawText ||
@@ -318,7 +343,7 @@ export function DocumentsTable({
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onClick={() => handleDelete(doc.id, doc.name)}
+                            onClick={() => handleDeleteClick(doc.id, doc.name)}
                             disabled={deleteLoading === doc.id}
                             variant="destructive"
                           >
@@ -335,6 +360,87 @@ export function DocumentsTable({
           </Table>
         </div>
       </CardContent>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Document</DialogTitle>
+            <DialogDescription className="break-words">
+              Are you sure you want to delete &ldquo;
+              {selectedDocument && truncateFilename(selectedDocument.name, 50)}
+              &rdquo;? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteConfirmOpen(false);
+                setSelectedDocument(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Process Confirmation Dialog */}
+      <Dialog open={processConfirmOpen} onOpenChange={setProcessConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Process Document</DialogTitle>
+            <DialogDescription className="break-words">
+              Process &ldquo;
+              {selectedDocument && truncateFilename(selectedDocument.name, 50)}
+              &rdquo; to extract text content?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setProcessConfirmOpen(false);
+                setSelectedDocument(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmProcess}>Process</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Index Confirmation Dialog */}
+      <Dialog open={indexConfirmOpen} onOpenChange={setIndexConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Index Document</DialogTitle>
+            <DialogDescription className="break-words">
+              Index &ldquo;
+              {selectedDocument && truncateFilename(selectedDocument.name, 50)}
+              &rdquo; for vector search? This will generate embeddings and may
+              incur OpenAI costs.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIndexConfirmOpen(false);
+                setSelectedDocument(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmIndex}>Index</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

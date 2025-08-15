@@ -5,6 +5,7 @@ import { auth } from "~/server/auth";
 import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
 import { LogoutDialog } from "~/components/logout-dialog";
+import { NotificationProvider } from "~/components/notification-provider";
 import {
   LogOut,
   Folder,
@@ -76,6 +77,7 @@ export default async function AdminLayout({
           {children}
         </main>
       </div>
+      <NotificationProvider />
     </div>
   );
 }

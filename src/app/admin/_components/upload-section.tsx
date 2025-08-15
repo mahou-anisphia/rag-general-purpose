@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { api } from "~/trpc/react";
+import { useNotifications } from "~/hooks/use-notifications";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -30,6 +31,8 @@ export function UploadSection({ onUploadSuccess }: UploadSectionProps) {
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
+  const { showError, showWarning } = useNotifications();
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedFiles(event.target.files);
   };
@@ -39,20 +42,25 @@ export function UploadSection({ onUploadSuccess }: UploadSectionProps) {
       setSelectedFiles(null);
       setIsUploading(false);
       // Reset the file input
-      const fileInput = document.getElementById("file-upload") as HTMLInputElement;
+      const fileInput = document.getElementById(
+        "file-upload",
+      ) as HTMLInputElement;
       if (fileInput) fileInput.value = "";
       // Notify parent of upload success
       onUploadSuccess();
     },
     onError: (error) => {
       setIsUploading(false);
-      alert("Upload failed: " + error.message);
+      showError({ title: "Upload failed", error });
     },
   });
 
   const handleUpload = async () => {
     if (!selectedFiles || selectedFiles.length === 0) {
-      alert("Please select files to upload");
+      showWarning({
+        title: "No files selected",
+        description: "Please select files to upload",
+      });
       return;
     }
 
@@ -62,7 +70,10 @@ export function UploadSection({ onUploadSuccess }: UploadSectionProps) {
       for (const file of Array.from(selectedFiles)) {
         // Validate file size
         if (file.size > 20 * 1024 * 1024) {
-          alert(`File ${file.name} exceeds 20MB limit`);
+          showWarning({
+            title: "File too large",
+            description: `File ${file.name} exceeds 20MB limit and will be skipped`,
+          });
           continue;
         }
 
@@ -93,12 +104,12 @@ export function UploadSection({ onUploadSuccess }: UploadSectionProps) {
       <CardContent className="space-y-4">
         <Label
           htmlFor="file-upload"
-          className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed p-8 text-center hover:bg-muted/40"
+          className="hover:bg-muted/40 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed p-8 text-center"
         >
-          <Upload className="size-6 text-primary" />
+          <Upload className="text-primary size-6" />
           <div className="space-y-1">
             <p className="text-sm">Drag and drop files here</p>
-            <p className="text-xs text-muted-foreground">or click to select</p>
+            <p className="text-muted-foreground text-xs">or click to select</p>
           </div>
           <Input
             id="file-upload"
@@ -111,15 +122,17 @@ export function UploadSection({ onUploadSuccess }: UploadSectionProps) {
           />
         </Label>
         {selectedFiles && selectedFiles.length > 0 && (
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             Selected {selectedFiles.length} file(s)
           </div>
         )}
         <div className="flex flex-wrap items-center gap-2">
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             onClick={handleUpload}
-            disabled={!selectedFiles || selectedFiles.length === 0 || isUploading}
+            disabled={
+              !selectedFiles || selectedFiles.length === 0 || isUploading
+            }
           >
             {isUploading ? "Uploading..." : "Start Upload"}
           </Button>
@@ -138,7 +151,7 @@ export function UploadSection({ onUploadSuccess }: UploadSectionProps) {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Parsing configuration options would go here.
                 </p>
               </div>

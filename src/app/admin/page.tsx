@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { api } from "~/trpc/react";
 import { TooltipProvider } from "~/components/ui/tooltip";
+import { useNotifications } from "~/hooks/use-notifications";
 import { UploadSection } from "./_components/upload-section";
 import { SettingsSection } from "./_components/settings-section";
 import { DocumentsTable } from "./_components/documents-table";
@@ -17,6 +18,7 @@ export default function AdminDocumentsPage() {
   const [previewLoading, setPreviewLoading] = useState<string | null>(null);
 
   const { data: documents = [], refetch } = api.documents.listAll.useQuery();
+  const { showError } = useNotifications();
 
   const previewMutation = api.documents.getPreviewUrl.useMutation({
     onSuccess: (data) => {
@@ -24,7 +26,7 @@ export default function AdminDocumentsPage() {
       setPreviewLoading(null);
     },
     onError: (error) => {
-      alert("Preview failed: " + error.message);
+      showError({ title: "Preview failed", error });
       setPreviewLoading(null);
     },
   });
