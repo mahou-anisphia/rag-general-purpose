@@ -44,10 +44,11 @@ export function ChatSidebar({
 
   // Get chat list from tRPC
   const { data: chats = [], isLoading } = api.chat.list.useQuery();
+  const utils = api.useUtils();
   const deleteChatMutation = api.chat.delete.useMutation({
     onSuccess: () => {
       // Refresh the chat list after deletion
-      void api.useUtils().chat.list.invalidate();
+      void utils.chat.list.invalidate();
     },
   });
 
