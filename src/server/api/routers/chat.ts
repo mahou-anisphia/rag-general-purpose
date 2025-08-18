@@ -385,10 +385,20 @@ Guidelines:
       },
     });
 
+    const userQueries = await ctx.db.message.count({
+      where: {
+        role: "USER",
+        chat: {
+          userId: ctx.session.user.id,
+        },
+      },
+    });
+
     return {
       totalChats,
       totalMessages,
       assistantMessages,
+      userQueries,
       averageMessagesPerChat:
         totalChats > 0 ? Math.round(totalMessages / totalChats) : 0,
     };

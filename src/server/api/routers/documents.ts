@@ -458,6 +458,41 @@ export const documentsRouter = createTRPCRouter({
       }
     }),
 
+  // Get user-specific document statistics
+  getStats: protectedProcedure.query(async ({ ctx }) => {
+    const totalDocuments = await ctx.db.document.count({
+      where: { uploadedById: ctx.session.user.id },
+    });
+
+    const indexedDocuments = await ctx.db.document.count({
+      where: {
+        uploadedById: ctx.session.user.id,
+        status: "INDEXED",
+      },
+    });
+
+    const pendingDocuments = await ctx.db.document.count({
+      where: {
+        uploadedById: ctx.session.user.id,
+        status: "PENDING",
+      },
+    });
+
+    const processingDocuments = await ctx.db.document.count({
+      where: {
+        uploadedById: ctx.session.user.id,
+        status: "PROCESSING",
+      },
+    });
+
+    return {
+      totalDocuments,
+      indexedDocuments,
+      pendingDocuments,
+      processingDocuments,
+    };
+  }),
+
   debugQdrant: protectedProcedure.mutation(async () => {
     try {
       const debug = await debugQdrantConnection();

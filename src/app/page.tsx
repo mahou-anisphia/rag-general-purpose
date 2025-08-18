@@ -9,6 +9,7 @@ import {
 import { Badge } from "~/components/ui/badge";
 import { LogoutDialog } from "~/components/logout-dialog";
 import { auth } from "~/server/auth";
+import { api } from "~/trpc/server";
 import {
   Moon,
   FileText,
@@ -24,6 +25,22 @@ import {
 
 export default async function HomePage() {
   const session = await auth();
+
+  // Fetch statistics if user is logged in
+  let documentStats = null;
+  let chatStats = null;
+
+  if (session?.user) {
+    try {
+      [documentStats, chatStats] = await Promise.all([
+        api.documents.getStats(),
+        api.chat.getStats(),
+      ]);
+    } catch (error) {
+      console.error("Error fetching homepage stats:", error);
+      // Continue with null stats - will show "-" as fallback
+    }
+  }
 
   return (
     <div className="from-background via-background to-muted/20 min-h-screen bg-gradient-to-br">
@@ -111,14 +128,18 @@ export default async function HomePage() {
                   <Card className="p-4">
                     <div className="space-y-2 text-center">
                       <FileText className="text-primary mx-auto h-8 w-8" />
-                      <p className="text-2xl font-bold">-</p>
+                      <p className="text-2xl font-bold">
+                        {documentStats?.totalDocuments ?? "-"}
+                      </p>
                       <p className="text-muted-foreground text-sm">Documents</p>
                     </div>
                   </Card>
                   <Card className="p-4">
                     <div className="space-y-2 text-center">
                       <MessageSquare className="text-primary mx-auto h-8 w-8" />
-                      <p className="text-2xl font-bold">-</p>
+                      <p className="text-2xl font-bold">
+                        {chatStats?.totalChats ?? "-"}
+                      </p>
                       <p className="text-muted-foreground text-sm">
                         Conversations
                       </p>
@@ -127,7 +148,9 @@ export default async function HomePage() {
                   <Card className="p-4">
                     <div className="space-y-2 text-center">
                       <Search className="text-primary mx-auto h-8 w-8" />
-                      <p className="text-2xl font-bold">-</p>
+                      <p className="text-2xl font-bold">
+                        {chatStats?.userQueries ?? "-"}
+                      </p>
                       <p className="text-muted-foreground text-sm">Queries</p>
                     </div>
                   </Card>
