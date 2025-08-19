@@ -2,18 +2,12 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "~/server/auth";
-import { cn } from "~/lib/utils";
+
 import { Button } from "~/components/ui/button";
 import { LogoutDialog } from "~/components/logout-dialog";
 import { NotificationProvider } from "~/components/notification-provider";
 import {
   LogOut,
-  Folder,
-  Users,
-  MessageSquare,
-  Wallet,
-  Database,
-  ServerCog,
   LayoutDashboard,
   Home,
 } from "lucide-react";

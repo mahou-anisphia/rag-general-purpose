@@ -56,7 +56,7 @@ export function DocumentPreview({ previewDoc, onClose }: DocumentPreviewProps) {
   };
 
   // Helper function to truncate long filenames
-  const truncateFileName = (fileName: string, maxLength: number = 50) => {
+  const truncateFileName = (fileName: string, maxLength = 50) => {
     if (fileName.length <= maxLength) return fileName;
 
     // Get file extension

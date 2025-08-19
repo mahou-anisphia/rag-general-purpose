@@ -27,7 +27,7 @@ export function SettingsSection() {
     },
     onError: (error) => {
       setDebugLoading(false);
-      showError({ title: "Debug failed", error });
+      showError({ title: "Debug failed", error: error.message });
     },
   });
 

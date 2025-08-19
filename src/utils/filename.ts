@@ -6,10 +6,7 @@
  * Truncates a filename if it's longer than the specified length
  * Keeps the file extension intact when possible
  */
-export function truncateFilename(
-  filename: string,
-  maxLength: number = 30,
-): string {
+export function truncateFilename(filename: string, maxLength = 30): string {
   if (filename.length <= maxLength) {
     return filename;
   }
@@ -53,5 +50,5 @@ export function getDisplayFilename(
  * Extracts just the filename from a full path
  */
 export function getFilenameFromPath(filePath: string): string {
-  return filePath.split(/[/\\]/).pop() || filePath;
+  return filePath.split(/[/\\]/).pop() ?? filePath;
 }

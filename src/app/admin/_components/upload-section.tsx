@@ -51,7 +51,7 @@ export function UploadSection({ onUploadSuccess }: UploadSectionProps) {
     },
     onError: (error) => {
       setIsUploading(false);
-      showError({ title: "Upload failed", error });
+      showError({ title: "Upload failed", error: error.message });
     },
   });
 

@@ -26,7 +26,7 @@ export default function AdminDocumentsPage() {
       setPreviewLoading(null);
     },
     onError: (error) => {
-      showError({ title: "Preview failed", error });
+      showError({ title: "Preview failed", error: error.message });
       setPreviewLoading(null);
     },
   });

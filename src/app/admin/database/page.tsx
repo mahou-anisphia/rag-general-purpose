@@ -23,11 +23,9 @@ import {
   MessageSquare,
   Zap,
 } from "lucide-react";
-import { useNotifications } from "~/hooks/use-notifications";
 
 export default function AdminDatabaseStatusPage() {
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const { showError } = useNotifications();
 
   const {
     data: status,
@@ -36,8 +34,6 @@ export default function AdminDatabaseStatusPage() {
     error,
   } = api.database.status.useQuery(undefined, {
     refetchInterval: autoRefresh ? 30000 : false, // Auto-refresh every 30 seconds if enabled
-    onError: (error) =>
-      showError({ title: "Failed to fetch database status", error }),
   });
 
   const formatTimestamp = (timestamp: string) => {

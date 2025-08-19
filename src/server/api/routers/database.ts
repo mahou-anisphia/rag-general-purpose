@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { db } from "~/server/db";
 import { healthCheck, getCollectionInfo } from "~/utils/vector-store";
@@ -89,12 +88,12 @@ async function checkQdrantConnection() {
 
     return {
       status: "connected" as const,
-      collectionName: process.env.QDRANT_COLLECTION || "documents",
+      collectionName: process.env.QDRANT_COLLECTION ?? "documents",
       pointsCount: collectionInfo.pointsCount,
       indexedVectorsCount: collectionInfo.indexedVectorsCount,
       collectionStatus: collectionInfo.status,
       embeddingModel:
-        process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-large",
+        process.env.OPENAI_EMBEDDING_MODEL ?? "text-embedding-3-large",
       lastChecked: new Date().toISOString(),
     };
   } catch (error) {
