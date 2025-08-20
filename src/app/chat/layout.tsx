@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "~/server/auth";
-import { ChatLayoutClient } from "./_components";
+import { ChatLayoutClient } from "~/components/chat";
 
 interface ChatLayoutProps {
   children: React.ReactNode;

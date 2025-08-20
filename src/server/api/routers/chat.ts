@@ -403,4 +403,128 @@ Guidelines:
         totalChats > 0 ? Math.round(totalMessages / totalChats) : 0,
     };
   }),
+
+  // Admin: List all chats from all users
+  adminListAll: protectedProcedure.query(async ({ ctx }) => {
+    const chats = await ctx.db.chat.findMany({
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+        messages: {
+          take: 1, // Just get the first message to show preview
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
+        _count: {
+          select: {
+            messages: true,
+          },
+        },
+      },
+      orderBy: {
+        updatedAt: "desc",
+      },
+    });
+
+    return chats.map((chat) => ({
+      id: chat.id,
+      title:
+        chat.title ??
+        (chat.messages[0]?.content
+          ? chat.messages[0].content.slice(0, 50) + "..."
+          : null) ??
+        "New Chat",
+      updatedAt: chat.updatedAt,
+      createdAt: chat.createdAt,
+      previewMessage: chat.messages[0]?.content,
+      messageCount: chat._count.messages,
+      user: {
+        name: chat.user.name,
+        email: chat.user.email,
+      },
+    }));
+  }),
+
+  // Admin: Get any chat by ID (without user restriction)
+  adminGetChat: protectedProcedure
+    .input(z.object({ chatId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const chat = await ctx.db.chat.findFirst({
+        where: {
+          id: input.chatId,
+        },
+        include: {
+          user: {
+            select: {
+              name: true,
+              email: true,
+            },
+          },
+          messages: {
+            include: {
+              sources: true,
+            },
+            orderBy: {
+              createdAt: "asc",
+            },
+          },
+        },
+      });
+
+      if (!chat) {
+        throw new Error("Chat not found");
+      }
+
+      return {
+        id: chat.id,
+        title: chat.title,
+        user: {
+          name: chat.user.name,
+          email: chat.user.email,
+        },
+        messages: chat.messages.map((message) => ({
+          id: message.id,
+          content: message.content,
+          role: message.role.toLowerCase() as "user" | "assistant" | "system",
+          timestamp: message.createdAt,
+          sources: message.sources.map((source) => ({
+            title: source.title,
+            snippet: source.snippet,
+            page: source.page ?? undefined,
+            score: source.score ?? undefined,
+            documentId: source.documentId ?? undefined,
+          })),
+        })),
+        createdAt: chat.createdAt,
+        updatedAt: chat.updatedAt,
+      };
+    }),
+
+  // Admin: Delete any chat by ID
+  adminDeleteChat: protectedProcedure
+    .input(z.object({ chatId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const chat = await ctx.db.chat.findFirst({
+        where: {
+          id: input.chatId,
+        },
+      });
+
+      if (!chat) {
+        throw new Error("Chat not found");
+      }
+
+      await ctx.db.chat.delete({
+        where: {
+          id: input.chatId,
+        },
+      });
+
+      return { success: true };
+    }),
 });

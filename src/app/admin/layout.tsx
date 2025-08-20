@@ -6,11 +6,7 @@ import { auth } from "~/server/auth";
 import { Button } from "~/components/ui/button";
 import { LogoutDialog } from "~/components/logout-dialog";
 import { NotificationProvider } from "~/components/notification-provider";
-import {
-  LogOut,
-  LayoutDashboard,
-  Home,
-} from "lucide-react";
+import { LogOut, LayoutDashboard, Home } from "lucide-react";
 
 import { ClientSideNavigation } from "./_components/client-nav";
 

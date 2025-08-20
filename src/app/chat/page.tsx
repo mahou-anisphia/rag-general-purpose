@@ -1,4 +1,4 @@
-import { ChatContainer } from "./_components/chat-container";
+import { ChatContainer } from "~/components/chat";
 
 export default function ChatPage() {
   return <ChatContainer />;

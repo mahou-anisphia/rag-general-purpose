@@ -90,3 +90,4 @@ export function ChatMessageComponent({ message }: ChatMessageProps) {
     </div>
   );
 }
+
