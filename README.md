@@ -100,9 +100,73 @@ graph TB
     class DB,Vector,Storage data
 ```
 
-## 🚀 Quick Start
+## 🚀 Quick Start (5 Minutes)
 
-### Prerequisites
+### Option 1: Docker (Recommended)
+
+The fastest way to get KuruBot running with all dependencies:
+
+```bash
+# 1. Clone the repository
+git clone <your-repo-url>
+cd kurubot
+
+# 2. Run the setup script (automated)
+chmod +x setup.sh
+./setup.sh
+
+# 3. Add your API keys when prompted, then the script will start everything
+```
+
+**Or manually:**
+
+```bash
+# 1. Clone and setup
+git clone <your-repo-url>
+cd kurubot
+cp env.example .env
+
+# 2. Add your API keys to .env file
+# - Discord OAuth (https://discord.com/developers/applications)
+# - OpenAI API key (https://platform.openai.com/api-keys)
+# - Anthropic API key (https://console.anthropic.com/)
+
+# 3. Start everything
+docker-compose up -d
+
+# 4. Open http://localhost:3000
+```
+
+**That's it!** 🎉 All services (PostgreSQL, Qdrant, MinIO) are automatically configured.
+
+### Option 2: Development Setup
+
+For local development with hot reload:
+
+```bash
+# 1. Start only the databases
+docker-compose -f docker-compose.dev.yml up -d
+
+# 2. Run the app locally
+pnpm install
+pnpm db:push
+pnpm dev
+```
+
+### Required API Keys
+
+| Service           | Where to Get                                                    | Required For        |
+| ----------------- | --------------------------------------------------------------- | ------------------- |
+| **Discord OAuth** | [Developer Portal](https://discord.com/developers/applications) | User authentication |
+| **OpenAI**        | [Platform API](https://platform.openai.com/api-keys)            | Document embeddings |
+| **Anthropic**     | [Console](https://console.anthropic.com/)                       | Chat responses      |
+
+### Manual Installation (Advanced)
+
+<details>
+<summary>Click to expand manual setup instructions</summary>
+
+#### Prerequisites
 
 - Node.js 18+ and pnpm
 - PostgreSQL database
@@ -112,7 +176,7 @@ graph TB
 - OpenAI API key
 - Anthropic API key
 
-### Installation
+#### Steps
 
 1. **Clone the repository**
 
@@ -130,7 +194,7 @@ graph TB
 3. **Set up environment variables**
 
    ```bash
-   cp .env.example .env
+   cp env.example .env
    ```
 
    Configure the following in your `.env` file:
@@ -175,6 +239,8 @@ graph TB
 
 6. **Visit the application**
    Open [http://localhost:3000](http://localhost:3000) in your browser
+
+</details>
 
 ## 🛠️ Development
 
@@ -250,44 +316,462 @@ graph TB
 - **Index Type**: HNSW
 - **Collection**: Automatically created on first use
 
-## 🐳 Deployment
+## 🐳 Docker Deployment (Recommended)
 
-### Using Docker
+The easiest way to get KuruBot running is with Docker Compose, which sets up all required services automatically.
 
-1. **Build the application**
+### Quick Start with Docker
+
+1. **Clone and prepare environment**
 
    ```bash
-   docker build -t kurubot .
+   git clone <your-repo-url>
+   cd kurubot
+   cp env.example .env
    ```
 
-2. **Run with docker-compose**
+2. **Configure required API keys in `.env`**
+
+   ```bash
+   # Required: Get from https://discord.com/developers/applications
+   AUTH_DISCORD_ID="your-discord-client-id"
+   AUTH_DISCORD_SECRET="your-discord-client-secret"
+
+   # Required: Get from https://platform.openai.com/api-keys
+   OPENAI_API_KEY="sk-your-openai-api-key-here"
+
+   # Required: Get from https://console.anthropic.com/
+   ANTHROPIC_API_KEY="sk-ant-your-anthropic-api-key-here"
+
+   # Optional: Change default passwords
+   AUTH_SECRET="your-super-secret-auth-secret-here"
+   POSTGRES_PASSWORD="your-secure-password"
+   MINIO_SECRET_KEY="your-minio-password"
+   ```
+
+3. **Start all services**
+
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **Access the application**
+   - **KuruBot App**: http://localhost:3000
+   - **MinIO Console**: http://localhost:9001 (admin/minioadmin123)
+   - **Qdrant Dashboard**: http://localhost:6333/dashboard
+
+### Docker Services Overview
+
+| Service        | Port      | Purpose           | Admin Access                    |
+| -------------- | --------- | ----------------- | ------------------------------- |
+| **KuruBot**    | 3000      | Main application  | http://localhost:3000           |
+| **PostgreSQL** | 5432      | User data & chats | Database only                   |
+| **Qdrant**     | 6333      | Vector search     | http://localhost:6333/dashboard |
+| **MinIO**      | 9000/9001 | Document storage  | http://localhost:9001           |
+
+### Development with Docker
+
+For development, use the dev compose file that only starts the dependencies:
+
+```bash
+# Start only the databases and services
+docker-compose -f docker-compose.dev.yml up -d
+
+# Run the app locally
+pnpm install
+pnpm db:push
+pnpm dev
+```
+
+### Docker Commands
+
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f kurubot
+
+# Stop all services
+docker-compose down
+
+# Stop and remove all data
+docker-compose down -v
+
+# Rebuild the application
+docker-compose build kurubot
+
+# Update to latest images
+docker-compose pull
+```
+
+### 🔧 Troubleshooting
+
+#### Common Issues
+
+**1. Port conflicts**
+
+```bash
+# Check what's using the ports
+netstat -tulpn | grep :3000
+netstat -tulpn | grep :5432
+
+# Change ports in .env file
+echo "APP_PORT=3001" >> .env
+echo "POSTGRES_PORT=5433" >> .env
+```
+
+**2. API key issues**
+
+```bash
+# Check if keys are properly loaded
+docker-compose logs kurubot | grep -i "api\|key\|auth"
+
+# Verify environment variables
+docker-compose exec kurubot printenv | grep -E "(OPENAI|ANTHROPIC|DISCORD)"
+```
+
+**3. Database connection issues**
+
+```bash
+# Check database status
+docker-compose ps postgres
+docker-compose logs postgres
+
+# Manual database connection test
+docker-compose exec postgres psql -U postgres -d kurubot -c "SELECT 1;"
+```
+
+**4. MinIO bucket access**
+
+```bash
+# Recreate MinIO bucket
+docker-compose restart minio-init
+
+# Check MinIO logs
+docker-compose logs minio
+```
+
+**5. Qdrant collection issues**
+
+```bash
+# Check Qdrant health
+curl http://localhost:6333/health
+
+# View collections
+curl http://localhost:6333/collections
+```
+
+#### Performance Tips
+
+- **Memory**: Allocate at least 4GB RAM for optimal performance
+- **Storage**: Use SSD storage for better database performance
+- **Network**: Ensure Docker has sufficient network bandwidth
+- **CPU**: Multi-core CPU recommended for concurrent document processing
+
+## 🐳 Docker Deployment Guide
+
+This guide provides comprehensive instructions for deploying KuruBot using Docker.
+
+### Architecture Overview
+
+KuruBot's Docker setup includes the following services:
+
+```mermaid
+graph TB
+    subgraph "Docker Network"
+        App[KuruBot App<br/>:3000]
+        DB[(PostgreSQL<br/>:5432)]
+        Vector[(Qdrant<br/>:6333)]
+        Storage[MinIO<br/>:9000/:9001]
+        Init[MinIO Init<br/>One-time setup]
+    end
+
+    User --> App
+    App --> DB
+    App --> Vector
+    App --> Storage
+    Init --> Storage
+
+    classDef app fill:#3b82f6,stroke:#1e40af,color:#fff
+    classDef data fill:#ef4444,stroke:#dc2626,color:#fff
+    classDef init fill:#10b981,stroke:#047857,color:#fff
+
+    class App app
+    class DB,Vector,Storage data
+    class Init init
+```
+
+### Service Details
+
+#### KuruBot Application
+
+- **Image**: Built from local Dockerfile (T3 Stack optimized)
+- **Ports**: 3000
+- **Dependencies**: All other services
+- **Health Check**: `/api/health` endpoint
+
+#### PostgreSQL Database
+
+- **Image**: `postgres:15-alpine`
+- **Ports**: 5432
+- **Volume**: `postgres_data`
+- **Purpose**: User data, chats, document metadata
+
+#### Qdrant Vector Database
+
+- **Image**: `qdrant/qdrant:v1.8.1`
+- **Ports**: 6333 (HTTP), 6334 (gRPC)
+- **Volume**: `qdrant_data`
+- **Purpose**: Vector embeddings for document search
+
+#### MinIO Object Storage
+
+- **Image**: `minio/minio:RELEASE.2024-01-16T16-07-38Z`
+- **Ports**: 9000 (API), 9001 (Console)
+- **Volume**: `minio_data`
+- **Purpose**: Document file storage
+
+### Environment Variables
+
+#### Required (Must Set)
+
+```bash
+# Discord OAuth
+AUTH_DISCORD_ID="your-discord-client-id"
+AUTH_DISCORD_SECRET="your-discord-client-secret"
+
+# OpenAI API
+OPENAI_API_KEY="sk-your-openai-api-key"
+
+# Anthropic API
+ANTHROPIC_API_KEY="sk-ant-your-anthropic-api-key"
+```
+
+#### Optional (Have Defaults)
+
+```bash
+# Database
+POSTGRES_PASSWORD="kurubot_password"
+POSTGRES_DB="kurubot"
+POSTGRES_PORT="5432"
+
+# Authentication
+AUTH_SECRET="your-super-secret-auth-secret-here"
+
+# MinIO
+MINIO_ACCESS_KEY="minioadmin"
+MINIO_SECRET_KEY="minioadmin123"
+MINIO_BUCKET="kurubot-documents"
+MINIO_PORT="9000"
+MINIO_CONSOLE_PORT="9001"
+
+# Qdrant
+QDRANT_COLLECTION="documents"
+QDRANT_PORT="6333"
+QDRANT_GRPC_PORT="6334"
+
+# AI Models
+OPENAI_EMBEDDING_MODEL="text-embedding-3-large"
+ANTHROPIC_CLAUDE_MODEL="claude-3-5-sonnet-20241022"
+
+# Application
+APP_PORT="3000"
+```
+
+### Production Deployment
+
+#### 1. Security Hardening
+
+```bash
+# Generate secure passwords
+export AUTH_SECRET=$(openssl rand -base64 32)
+export POSTGRES_PASSWORD=$(openssl rand -base64 24)
+export MINIO_SECRET_KEY=$(openssl rand -base64 24)
+
+# Update .env file
+echo "AUTH_SECRET=$AUTH_SECRET" >> .env
+echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" >> .env
+echo "MINIO_SECRET_KEY=$MINIO_SECRET_KEY" >> .env
+```
+
+#### 2. Resource Limits
+
+Add to `docker-compose.yml`:
+
+```yaml
+services:
+  kurubot:
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "1.0"
+        reservations:
+          memory: 1G
+          cpus: "0.5"
+
+  postgres:
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "0.5"
+
+  qdrant:
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "1.0"
+```
+
+#### 3. Backup Strategy
+
+```bash
+# Database backup
+docker-compose exec postgres pg_dump -U postgres kurubot > backup_$(date +%Y%m%d).sql
+
+# Volume backup
+docker run --rm -v kurubot_postgres_data:/data -v $(pwd):/backup alpine tar czf /backup/postgres_backup.tar.gz /data
+docker run --rm -v kurubot_qdrant_data:/data -v $(pwd):/backup alpine tar czf /backup/qdrant_backup.tar.gz /data
+docker run --rm -v kurubot_minio_data:/data -v $(pwd):/backup alpine tar czf /backup/minio_backup.tar.gz /data
+```
+
+### Development Setup
+
+For development with hot reload:
+
+```bash
+# Start only dependencies
+docker-compose up -d postgres qdrant minio minio-init
+
+# Run app locally
+pnpm install
+pnpm db:push
+pnpm dev
+```
+
+### Advanced Troubleshooting
+
+#### Health Checks
+
+```bash
+# Application health
+curl http://localhost:3000/api/health
+
+# Database health
+docker-compose exec postgres pg_isready -U postgres
+
+# Qdrant health
+curl http://localhost:6333/health
+
+# MinIO health
+curl http://localhost:9000/minio/health/live
+```
+
+#### Debugging
+
+```bash
+# Enter containers
+docker-compose exec kurubot sh
+docker-compose exec postgres psql -U postgres kurubot
+
+# View all logs
+docker-compose logs -f
+
+# Check environment variables
+docker-compose exec kurubot printenv | grep -E "(DATABASE|QDRANT|MINIO|OPENAI|ANTHROPIC)"
+```
+
+### Performance Optimization
+
+#### 1. Database Tuning
+
+Create `postgres.conf`:
+
+```ini
+# Memory
+shared_buffers = 256MB
+effective_cache_size = 1GB
+
+# Connections
+max_connections = 100
+
+# Performance
+random_page_cost = 1.1
+effective_io_concurrency = 200
+```
+
+#### 2. Qdrant Optimization
+
+For large document collections, consider:
+
+- Increasing `shard_number` in collection config
+- Using quantization for memory efficiency
+- Enabling disk storage for large collections
+
+#### 3. Application Optimization
+
+```dockerfile
+# In Dockerfile, add Node.js optimization
+ENV NODE_OPTIONS="--max-old-space-size=2048"
+```
+
+### Monitoring
+
+#### Basic Monitoring
+
+```bash
+# Resource usage
+docker stats
+
+# Service health
+watch -n 5 'docker-compose ps'
+
+# Log monitoring
+docker-compose logs -f --tail=100
+```
+
+#### Advanced Monitoring
+
+Consider adding monitoring services:
+
+- Prometheus + Grafana for metrics
+- Loki for log aggregation
+- AlertManager for notifications
+
+### Scaling
+
+#### Horizontal Scaling
+
+For high-traffic deployments:
+
+1. Use external managed services:
+   - Managed PostgreSQL (AWS RDS, Google Cloud SQL)
+   - Qdrant Cloud
+   - AWS S3 or Google Cloud Storage
+
+2. Load balancer for multiple app instances:
 
    ```yaml
-   version: "3.8"
    services:
      kurubot:
-       image: kurubot
-       ports:
-         - "3000:3000"
-       environment:
-         - DATABASE_URL=postgresql://...
-         - QDRANT_URL=http://qdrant:6333
-         # ... other env vars
+       deploy:
+         replicas: 3
 
-     postgres:
-       image: postgres:15
-       # ... postgres config
-
-     qdrant:
-       image: qdrant/qdrant
-       # ... qdrant config
-
-     minio:
-       image: minio/minio
-       # ... minio config
+     nginx:
+       image: nginx:alpine
+       # Load balancer configuration
    ```
 
-### Using Vercel
+#### Vertical Scaling
+
+Increase resource limits in docker-compose.yml as needed.
+
+## 🔧 Manual Deployment
+
+### Using Vercel + External Services
 
 1. **Deploy to Vercel**
 
@@ -295,9 +779,12 @@ graph TB
    vercel deploy
    ```
 
-2. **Configure environment variables** in the Vercel dashboard
+2. **Set up external services**
+   - PostgreSQL (e.g., Supabase, Railway, Neon)
+   - Qdrant Cloud or self-hosted
+   - S3 or MinIO instance
 
-3. **Set up external services** (PostgreSQL, Qdrant, MinIO)
+3. **Configure environment variables** in Vercel dashboard
 
 ## 🤝 Contributing
 
